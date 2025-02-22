@@ -2,9 +2,10 @@
   "name": "youtube-clone-backend",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon dotenv/config --experimental-modules src/index.js"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +15,8 @@
   },
   "dependencies": {
     "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^8.10.1",
     "prettier": "^3.5.2"
   }
 }
