@@ -29,10 +29,13 @@ app.use(cookieParser());
 
 /// Routes import
 import userRoute from "./routes/user.route.js";
+import errorHandler from "./middlewares/errorHandler.js";
 
 
 
 
 // routes declaration
 app.use("/api/v1/users", userRoute);
+
+app.use(errorHandler);
 export { app };
