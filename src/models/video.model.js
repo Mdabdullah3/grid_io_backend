@@ -27,21 +27,6 @@ const videoSchema = new mongoose.Schema({
         required: true,
         default: 0
     },
-    likes: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-    dislikes: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-    comments: {
-        type: Array,
-        required: true,
-        default: []
-    },
     owner: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
