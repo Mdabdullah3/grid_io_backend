@@ -22,7 +22,7 @@ router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/refresh-token").post(refreshAccessToken);
 
 // user email verification routes
-router.route('/verify-email').post(verifyEmail)
-router.route('/resend-verification-code').post(resendVerificationCode)
+router.route('/verify-email').post(verifyEmail);
+router.route('/resend-verification-code').post(resendVerificationCode);
 
 export default router;

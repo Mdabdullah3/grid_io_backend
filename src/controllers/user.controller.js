@@ -27,17 +27,13 @@ const generateAccessTokenAndRefreshToken = async (userId) => {
         throw new ApiError(500, "Failed to generate access token and refresh token");
     }
 };
+const encodeEmail = (email) => {
+    return Buffer.from(email).toString("base64");
+};
 
-// get user details from request body
-// validation of user details
-// check if user already exists : username & email
-// check for images, check for avatar
-// upload them to cloudinary and get urls
-// create user object - create entry in database
-// remove password and refresh token from response
-// check for user creation 
-// return response
-
+const decodeEmail = (encodedEmail) => {
+    return Buffer.from(encodedEmail, "base64").toString("utf-8");
+};
 const registerUser = asyncHandler(async (req, res) => {
     const { fullName, email, username, password } = req.body;
 
@@ -75,17 +71,24 @@ const registerUser = asyncHandler(async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     try {
-        await sendVerificationEmail(user.email, verificationCode);
+        // Encode the email address
+        const encodedEmail = encodeEmail(user.email);
+
+        // Include the encoded email in the verification URL
+        const verificationUrl = `http://yourapp.com/verify-email?email=${encodedEmail}&code=${verificationCode}`;
+
+        // Send the verification email
+        await sendVerificationEmail(user.email, verificationUrl, verificationCode, user.fullName);
+
+        // Return response with the encoded email for frontend redirection
+        const createdUser = await User.findById(user._id).select("-password -refreshToken");
+        return res.status(201).json(
+            new ApiResponse(201, { user: createdUser, encodedEmail }, "User registered successfully. Verification email sent.")
+        );
     } catch (error) {
         await User.findByIdAndDelete(user._id);
         throw new ApiError(500, "Failed to send verification email.");
     }
-
-    // Return response
-    const createdUser = await User.findById(user._id).select("-password -refreshToken");
-    return res.status(201).json(
-        new ApiResponse(201, createdUser, "User registered successfully. Verification email sent.")
-    );
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -179,12 +182,16 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 })
 
 const verifyEmail = asyncHandler(async (req, res) => {
-    const { email, code } = req.body;
+    const { email: encodedEmail, code } = req.body;
 
-    if (!email || !code) {
+    if (!encodedEmail || !code) {
         throw new ApiError(400, "Email and verification code are required");
     }
 
+    // Decode the email address
+    const email = decodeEmail(encodedEmail);
+
+    // Find the user by email
     const user = await User.findOne({ email });
     if (!user) {
         throw new ApiError(404, "User not found");
@@ -203,8 +210,9 @@ const verifyEmail = asyncHandler(async (req, res) => {
     if (Date.now() > user.emailVerificationExpiry.getTime()) {
         throw new ApiError(400, "Verification code has expired");
     }
-    user.resendAttempts = 0;
 
+    // Mark the user as verified
+    user.resendAttempts = 0;
     user.isVerified = true;
     user.emailVerificationCode = undefined;
     user.emailVerificationExpiry = undefined;
@@ -216,30 +224,47 @@ const verifyEmail = asyncHandler(async (req, res) => {
 });
 
 const resendVerificationCode = asyncHandler(async (req, res) => {
-    const { email } = req.body;
+    const { email: encodedEmail } = req.body;
 
+    if (!encodedEmail) {
+        throw new ApiError(400, "Email is required");
+    }
+
+    // Decode the email address
+    const email = decodeEmail(encodedEmail);
+
+    // Find the user by email
     const user = await User.findOne({ email });
     if (!user) {
-        throw new ApiError(404, "This email is not Registered");
+        throw new ApiError(404, "User not found");
     }
 
     if (user.isVerified) {
         throw new ApiError(400, "Email is already verified");
     }
+
     const MAX_RESEND_ATTEMPTS = 3;
     if (user.resendAttempts >= MAX_RESEND_ATTEMPTS) {
-        throw new ApiError(429, "Too many resend requests");
+        throw new ApiError(429, "Too many resend requests. Please try again later.");
     }
+
+    // Generate a new verification code
     user.resendAttempts += 1;
     const verificationCode = generateVerificationCode();
-    const verificationExpiry = new Date(Date.now() + 10 * 60 * 1000);
-
+    const verificationExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     user.emailVerificationCode = verificationCode;
     user.emailVerificationExpiry = verificationExpiry;
     await user.save({ validateBeforeSave: false });
 
     try {
-        await sendVerificationEmail(user.email, verificationCode);
+        // Encode the email address
+        const encodedEmail = encodeEmail(user.email);
+
+        // Include the encoded email in the verification URL
+        const verificationUrl = `http://yourapp.com/verify-email?email=${encodedEmail}&code=${verificationCode}`;
+
+        // Send the verification email
+        await sendVerificationEmail(user.email, verificationUrl, verificationCode, user.fullName);
     } catch (error) {
         throw new ApiError(500, "Failed to resend verification code");
     }
