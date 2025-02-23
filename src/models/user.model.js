@@ -37,6 +37,22 @@ const userSchema = new mongoose.Schema({
             ref: "Video",
         },
     ],
+    isVerified: {
+        type: Boolean,
+        default: false,
+    },
+    emailVerificationCode: {
+        type: String,
+        index: true,
+    },
+    emailVerificationExpiry: {
+        type: Date,
+        index: true,
+    },
+    resendAttempts: {
+        type: Number,
+        default: 0
+    },
     password: {
         type: String,
         required: [true, "Password is required"],
@@ -92,5 +108,12 @@ userSchema.methods.generateRefreshToken = function () {
         }
     );
 };
+
+userSchema.pre("save", function (next) {
+    if (this.isModified("emailVerificationCode")) {
+        this.emailVerificationExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    }
+    next();
+});
 
 export default mongoose.model("User", userSchema);

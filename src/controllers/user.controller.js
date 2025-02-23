@@ -5,7 +5,8 @@ import User from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-
+import { generateVerificationCode, sendVerificationEmail } from "../utils/email.js";
+import { VERIFICATION_CODE_EXPIRY } from "../constants.js";
 
 
 const generateAccessTokenAndRefreshToken = async (userId) => {
@@ -27,59 +28,37 @@ const generateAccessTokenAndRefreshToken = async (userId) => {
     }
 };
 
+// get user details from request body
+// validation of user details
+// check if user already exists : username & email
+// check for images, check for avatar
+// upload them to cloudinary and get urls
+// create user object - create entry in database
+// remove password and refresh token from response
+// check for user creation 
+// return response
+
 const registerUser = asyncHandler(async (req, res) => {
-
-    // get user details from request body
-    // validation of user details
-    // check if user already exists : username & email
-    // check for images, check for avatar
-    // upload them to cloudinary and get urls
-    // create user object - create entry in database
-    // remove password and refresh token from response
-    // check for user creation 
-    // return response
-
-
-
-    // Destructure the validated fields from req.body
     const { fullName, email, username, password } = req.body;
 
-    const errors = []
-    const emailExists = await User.findOne({ email });
-    if (emailExists) {
-        errors.push("A user with this email already exists. Please use a different email.");
-    }
+    // Validate user input
+    const errors = [];
+    if (await User.findOne({ email })) errors.push("Email already exists.");
+    if (await User.findOne({ username })) errors.push("Username already taken.");
+    if (errors.length > 0) throw new ApiError(400, "Validation error", errors);
 
-    // Check if the username is already in use
-    const usernameExists = await User.findOne({ username });
-    if (usernameExists) {
-        errors.push("This username is already taken. Please choose a different username.");
-    }
-
-    // If any errors were found, throw an ApiError with the combined messages
-    if (errors.length > 0) {
-        throw new ApiError(400, "Validation error", errors);
-    }
-
-
-
-    // Retrieve file paths from Multer middleware
+    // Handle file uploads
     const avatarFile = req.files?.avatar?.[0]?.path;
-    const coverImageFile = req.files?.coverImage?.[0]?.path;
+    if (!avatarFile) throw new ApiError(400, "Avatar image is required");
 
-    // Check if avatar exists
-    if (!avatarFile) {
-        throw new ApiError(400, "Avatar image is required");
-    }
-    const avatarUrl = avatarFile ? await uploadOnCloudinary(avatarFile) : null;
-    const coverImageUrl = coverImageFile ? await uploadOnCloudinary(coverImageFile) : null;
+    const avatarUrl = await uploadOnCloudinary(avatarFile);
+    if (!avatarUrl) throw new ApiError(400, "Avatar upload failed");
 
-    if (!avatarUrl) {
-        throw new ApiError(400, "Avatar image upload failed");
-    }
+    const coverImageUrl = req.files?.coverImage?.[0]?.path
+        ? await uploadOnCloudinary(req.files.coverImage[0].path)
+        : null;
 
-
-    // Create the user; password hashing is handled in the model's pre-save hook
+    // Create user
     const user = await User.create({
         fullName,
         email,
@@ -89,15 +68,23 @@ const registerUser = asyncHandler(async (req, res) => {
         coverImage: coverImageUrl?.url || "",
     });
 
-    // Remove password and refreshToken from response object
-    const createdUser = await User.findById(user?._id).select("-password -refreshToken");
-    if (!createdUser) {
-        throw new ApiError(500, "Something went wrong while creating user");
+    // Generate and send verification code
+    const verificationCode = generateVerificationCode();
+    user.emailVerificationCode = verificationCode;
+    user.emailVerificationExpiry = new Date(Date.now() + VERIFICATION_CODE_EXPIRY);
+    await user.save({ validateBeforeSave: false });
+
+    try {
+        await sendVerificationEmail(user.email, verificationCode);
+    } catch (error) {
+        await User.findByIdAndDelete(user._id);
+        throw new ApiError(500, "Failed to send verification email.");
     }
 
-    // Return response with user details and success message
+    // Return response
+    const createdUser = await User.findById(user._id).select("-password -refreshToken");
     return res.status(201).json(
-        new ApiResponse(200, createdUser, "User Registered successfully")
+        new ApiResponse(201, createdUser, "User registered successfully. Verification email sent.")
     );
 });
 
@@ -114,9 +101,13 @@ const loginUser = asyncHandler(async (req, res) => {
     if (!email && !username) {
         throw new ApiError(400, "Email or Username are required");
     }
+
     const user = await User?.findOne({ $or: [{ email }, { username }] });
     if (!user) {
         throw new ApiError(400, "User does not exist");
+    }
+    if (!user.isVerified) {
+        throw new ApiError(403, "Please verify your email first");
     }
     const isPasswordCorrect = await user?.isPasswordCorrect(password);
 
@@ -163,16 +154,16 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     try {
         const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
-    
+
         const user = await User.findById(decodedToken?._id)
-    
+
         if (!user) {
             throw new ApiError(401, "Invalid Refresh token");
         }
         if (incomingRefreshToken !== user?.refreshToken) {
             throw new ApiError(401, "Refresh token is invalid");
         }
-    
+
         const options = {
             httpOnly: true,
             secure: true,
@@ -186,5 +177,79 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         throw new ApiError(401, error.message || "Invalid Refresh token");
     }
 })
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+
+const verifyEmail = asyncHandler(async (req, res) => {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+        throw new ApiError(400, "Email and verification code are required");
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    if (user.isVerified) {
+        return res.status(200).json(
+            new ApiResponse(200, {}, "Email already verified")
+        );
+    }
+
+    if (user.emailVerificationCode !== code) {
+        throw new ApiError(400, "Invalid verification code");
+    }
+
+    if (Date.now() > user.emailVerificationExpiry.getTime()) {
+        throw new ApiError(400, "Verification code has expired");
+    }
+    user.resendAttempts = 0;
+
+    user.isVerified = true;
+    user.emailVerificationCode = undefined;
+    user.emailVerificationExpiry = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Email verified successfully")
+    );
+});
+
+const resendVerificationCode = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        throw new ApiError(404, "This email is not Registered");
+    }
+
+    if (user.isVerified) {
+        throw new ApiError(400, "Email is already verified");
+    }
+    const MAX_RESEND_ATTEMPTS = 3;
+    if (user.resendAttempts >= MAX_RESEND_ATTEMPTS) {
+        throw new ApiError(429, "Too many resend requests");
+    }
+    user.resendAttempts += 1;
+    const verificationCode = generateVerificationCode();
+    const verificationExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.emailVerificationCode = verificationCode;
+    user.emailVerificationExpiry = verificationExpiry;
+    await user.save({ validateBeforeSave: false });
+
+    try {
+        await sendVerificationEmail(user.email, verificationCode);
+    } catch (error) {
+        throw new ApiError(500, "Failed to resend verification code");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Verification code resent successfully")
+    );
+});
+export {
+    registerUser, loginUser, logoutUser, refreshAccessToken, verifyEmail,
+    resendVerificationCode
+};
 
