@@ -2,9 +2,9 @@
 import Joi from "joi";
 
 export const registerUserSchema = Joi.object({
-    fullName: Joi.string().min(3).required().messages({
+    fullName: Joi.string().min(4).required().messages({
         "string.empty": "Full name is required",
-        "string.min": "Full name should be at least 3 characters long",
+        "string.min": "Full name should be at least 4 characters long",
     }),
     email: Joi.string().email().required().messages({
         "string.email": "Please provide a valid email address",

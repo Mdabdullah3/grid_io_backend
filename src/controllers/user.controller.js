@@ -22,11 +22,24 @@ const registerUser = asyncHandler(async (req, res) => {
     // Destructure the validated fields from req.body
     const { fullName, email, username, password } = req.body;
 
-    // Check if a user with this email or username already exists
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-    if (existingUser) {
-        throw new ApiError(400, "User with this email or username already exists");
+    const errors = []
+    const emailExists = await User.findOne({ email });
+    if (emailExists) {
+        errors.push("A user with this email already exists. Please use a different email.");
     }
+
+    // Check if the username is already in use
+    const usernameExists = await User.findOne({ username });
+    if (usernameExists) {
+        errors.push("This username is already taken. Please choose a different username.");
+    }
+
+    // If any errors were found, throw an ApiError with the combined messages
+    if (errors.length > 0) {
+        throw new ApiError(400, "Validation error", errors);
+    }
+
+
 
     // Retrieve file paths from Multer middleware
     const avatarFile = req.files?.avatar?.[0]?.path;
