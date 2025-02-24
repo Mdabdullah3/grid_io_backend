@@ -111,7 +111,6 @@ CORS_ORIGIN=http://your-frontend-domain.com
 
 ### Routes
 
-- GET /
 - GET /register
 - GET /login
 - GET /verify-email
@@ -134,7 +133,6 @@ Authentication Flow:
 ` - POST 	`http://localhost:8000/api/v1/users/register'
 `
 ```
-
 const field = {
 "fullName": "John Doe",
 "email": "john@example.com",
@@ -142,12 +140,12 @@ const field = {
 "password": "SecurePass123!",
 "avatar": "<binary file>",
 "coverImage": "<binary file>" // Optional
-}
-
+} 
 ```
+
 ### Response (201 Created):
-```
 
+```
 {
 "success": true,
 "message": "User registered successfully. Verification email sent.",
