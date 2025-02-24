@@ -275,6 +275,6 @@ const resendVerificationCode = asyncHandler(async (req, res) => {
 });
 export {
     registerUser, loginUser, logoutUser, refreshAccessToken, verifyEmail,
-    resendVerificationCode
+    resendVerificationCode, generateAccessTokenAndRefreshToken
 };
 

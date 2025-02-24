@@ -1,9 +1,21 @@
 import express from "express";
+import passport from "passport";
+import session from "express-session";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import "./config/google.strategy.js";
 const app = express();
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: true,
+        cookie: { secure: false }, // Set to true if using HTTPS
+    })
+);
+app.use(passport.initialize());
+app.use(passport.session());
 
-// Middlewares cors and body parser
 app.use(cors({
     origin: process.env.CORS_ORIGIN,
     credentials: true
@@ -30,7 +42,6 @@ app.use(cookieParser());
 /// Routes import
 import userRoute from "./routes/user.route.js";
 import errorHandler from "./middlewares/errorHandler.js";
-
 
 
 
