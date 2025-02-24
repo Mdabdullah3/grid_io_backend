@@ -273,8 +273,70 @@ const resendVerificationCode = asyncHandler(async (req, res) => {
         new ApiResponse(200, {}, "Verification code resent successfully")
     );
 });
+
+const getMe = asyncHandler(async (req, res) => {
+    const user = req.user;
+
+    if (!user) {
+        throw new ApiError(401, "Unauthorized: User not found");
+    }
+
+    // Return the user details
+    return res.status(200).json(
+        new ApiResponse(200, { user }, "Logged in User details fetched Successfully")
+    );
+});
+
+const getSingleUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const user = await User.findById(userId).select("-password -refreshToken");
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+    return res.status(200).json(
+        new ApiResponse(200, { user }, "User details fetched successfully")
+    );
+});
+const getAllUsers = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10 } = req.query; // Default page = 1, limit = 10
+
+    // Parse page and limit as numbers
+    const parsedPage = parseInt(page);
+    const parsedLimit = parseInt(limit);
+
+    // Fetch users with pagination
+    const users = await User.find()
+        .select("-password -refreshToken")
+        .skip((parsedPage - 1) * parsedLimit)
+        .limit(parsedLimit);
+
+    // Get the total number of users
+    const totalUsers = await User.countDocuments();
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            users,
+            totalUsers,
+            currentPage: parsedPage,
+            totalPages: Math.ceil(totalUsers / parsedLimit),
+        }, "All users fetched successfully")
+    );
+});
+
+const deleteUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+    await User.findByIdAndDelete(userId);
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "User deleted successfully")
+    );
+});
 export {
     registerUser, loginUser, logoutUser, refreshAccessToken, verifyEmail,
-    resendVerificationCode, generateAccessTokenAndRefreshToken
+    resendVerificationCode, generateAccessTokenAndRefreshToken, getMe, getSingleUser, getAllUsers, deleteUser
 };
 
