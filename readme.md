@@ -135,6 +135,7 @@ Authentication Flow:
 ```
 - POST 	`http://localhost:8000/api/v1/users/register'
 ```
+
 ```
 const field = {
 "fullName": "John Doe",
@@ -143,7 +144,7 @@ const field = {
 "password": "SecurePass123!",
 "avatar": "<binary file>",
 "coverImage": "<binary file>" // Optional
-} 
+}
 ```
 
 ### Response (201 Created):
@@ -164,60 +165,71 @@ const field = {
 }
 
 ```
-` - POST 	`http://localhost:8000/api/v1/users/login'
-`
--Authenticate user and get tokens
+
+```
+- POST 	`http://localhost:8000/api/v1/users/login`
+```
+
+### Authenticate user and get tokens
+
 ## Request:
 
 ```
 
 {
-"email": "john@example.com", // or "username": "johndoe"
-"password": "SecurePass123!"
+   "email": "john@example.com", // or "username": "johndoe"
+   "password": "SecurePass123!"
 }
 
 ```
+
 ## Response (200 OK):
 
 ```
 
 {
-"success": true,
-"message": "User logged in successfully",
-"data": {
-"user": {
-"\_id": "65a1b...",
-"username": "johndoe",
-"email": "john@example.com"
+   "success": true,
+   "message": "User logged in successfully",
+   "data": { }
+   "user": { }
+   "\_id": "65a1b...",
+   "username": "johndoe",
+   "email": "john@example.com"
 },
-"accessToken": "eyJ...",
-"refreshToken": "eyJ..."
-}
-}
+
+   "accessToken": "eyJ...",
+   "refreshToken": "eyJ..."
+
 // Cookies set automatically:
 // - accessToken
 // - refreshToken
 
 ```
-` - POST 	`http://localhost:8000/api/v1/users/logout'
-`
+```
+ - POST - `http://localhost:8000/api/v1/users/logout`
+
+```
 -Invalidate current session
+
 ## Response (200 OK):
 
 ```
 
 {
-"success": true,
-"message": "User logged out successfully"
+    "success": true,
+    "message": "User logged out successfully"
 }
+
 // Cookies cleared: accessToken, refreshToken
 
 ```
-` Refresh Access Token  POST - `http://localhost:8000/api/v1/users/refresh-token`
+
+`Refresh Access Token  POST -`http://localhost:8000/api/v1/users/refresh-token`
 `
 Get new access token using refresh token
 
 ## Response (200 OK):
+
 ```
 
 {
@@ -230,16 +242,21 @@ Get new access token using refresh token
 }
 
 ```
-` Refresh Access Token  POST - `http://localhost:8000/api/v1/users/verify-email`
+
+`Refresh Access Token  POST -`http://localhost:8000/api/v1/users/verify-email`
 `
+
 - Confirm email address with verification code
-## request 
+
+## request
+
 ```
 {
   "email": "am9obkBleGFtcGxlLmNvbQ==", // Encoded email
   "code": "529713"
 }
 ```
+
 ## Response (200 OK):
 
 ```
@@ -248,23 +265,28 @@ Get new access token using refresh token
   "message": "Email verified successfully"
 }
 ```
+
 `Resend Verification Code POST- `http://localhost:8000/api/v1/users/resend-verification-code`
 
 - Request new verification code
 
 ## Request:
+
 ```
 {
   "email": "am9obkBleGFtcGxlLmNvbQ=="
 }
 ```
+
 ## Response Ok
+
 ```
 {
   "success": true,
   "message": "Verification code resent successfully"
 }
 ```
+
 #📨 Email Verification Flow
 
 ```
@@ -275,7 +297,7 @@ sequenceDiagram
     Frontend->>Backend: POST /verify-email {code}
     Backend->>Frontend: 200 OK (verified)
 
-````
+```
 
 ## Frontend Implementation Tips:
 
@@ -290,6 +312,7 @@ sequenceDiagram
 5. Limit resend attempts (3 max)
 
 #🚨 Error Handling
+
 - Common Error Responses:
 
 ```
@@ -300,6 +323,7 @@ sequenceDiagram
   "data": null
 }
 ```
+
 # Status Codes:
 
 1. 400: Bad Request (validation errors)
