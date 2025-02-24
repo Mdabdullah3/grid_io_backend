@@ -134,15 +134,33 @@ Authentication Flow:
 
 - POST 	`http://localhost:8000/api/v1/users/register'
 
+##### For Local Register
+` - POST 	`http://localhost:5000/api/auth/register'
+`
 ```
-const field = {
-"fullName": "John Doe",
-"email": "john@example.com",
-"username": "johndoe",
-"password": "SecurePass123!",
-"avatar": "<binary file>",
-"coverImage": "<binary file>" // Optional
-} 
+const fields = {
+	email: 'abc@gmail.com',
+	password: 'yourpassword',
+}
+
+try {
+	const res = await fetch('/api/auth/register', {
+		method: 'POST',
+		body: JSON.stringify(fields),
+		headers: {
+			'content-type': 'application/json',
+			'accept': 'application/json',
+		}
+	})
+	if( !res.ok ) throw await res.json()
+
+	const data = await res.json()
+	console.log(data)
+
+} catch( err ) {
+	console.log(err)
+}
+
 ```
 
 ### Response (201 Created):
