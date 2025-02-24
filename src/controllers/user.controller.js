@@ -335,8 +335,68 @@ const deleteUser = asyncHandler(async (req, res) => {
         new ApiResponse(200, {}, "User deleted successfully")
     );
 });
+
+const changCurrentPassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword, confirmPassword } = req.body
+
+    if (newPassword !== confirmPassword) {
+        throw new ApiError(400, "New password and confirm password do not match")
+    }
+    const user = await User.findById(req?.user?._id)
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+    if (!isPasswordCorrect) {
+        throw new ApiError(400, "Old password is incorrect")
+    }
+    user.password = newPassword
+    await user.save({ validateBeforeSave: false })
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Password changed successfully")
+    );
+
+})
+const updateAccountDetails = asyncHandler(async (req, res) => {
+    const { fullName, email } = req.body;
+    if (!fullName && !email) {
+        throw new ApiError(400, "FullName or Email is required")
+    }
+    const user = await User.findById(req?.user?._id, {
+        $set: {
+            fullName,
+            email: email
+        }
+    }, {
+        new: true
+    }).select("-password")
+
+    return res.status(200).json(
+        new ApiResponse(200, user, "Account details updated successfully")
+    );
+})
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+    const avatarLocalPath = req.files?.path
+
+    if (!avatarLocalPath) {
+        throw new ApiError(400, "Avatar image is required")
+    }
+    const avatarUrl = await uploadOnCloudinary(avatarLocalPath)
+
+    if (!avatarUrl.url) {
+        throw new ApiError(400, "Error while uploading on avatar")
+    }
+    const user = await User.findById(req?.user?._id, {
+        $set: {
+            avatar: avatarUrl.url
+        }
+    }, {
+        new: true
+    }).select("-password")
+    return res.status(200).json(
+        new ApiResponse(200, user, "Avatar updated successfully")
+    );
+})
 export {
     registerUser, loginUser, logoutUser, refreshAccessToken, verifyEmail,
-    resendVerificationCode, generateAccessTokenAndRefreshToken, getMe, getSingleUser, getAllUsers, deleteUser
+    resendVerificationCode, generateAccessTokenAndRefreshToken, getMe, getSingleUser, getAllUsers, deleteUser, changCurrentPassword, updateAccountDetails, updateUserAvatar
 };
 
