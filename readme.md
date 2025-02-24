@@ -129,11 +129,11 @@ Authentication Flow:
 2. AccessToken expires → Use RefreshToken to get new AccessToken
 3. All subsequent requests include AccessToken automatically via cookies
 
-##### For Local Register
+## For Local Register
 
-```
+
 - POST 	`http://localhost:8000/api/v1/users/register'
-```
+
 ```
 const field = {
 "fullName": "John Doe",
