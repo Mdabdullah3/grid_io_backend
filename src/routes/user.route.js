@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getMe, loginUser, logoutUser, refreshAccessToken, registerUser, resendVerificationCode, verifyEmail } from "../controllers/user.controller.js";
+import { changCurrentPassword, getMe, getUserChannelProfile, getWatchHistory, loginUser, logoutUser, refreshAccessToken, registerUser, resendVerificationCode, updateAccountDetails, updateUserAvatar, verifyEmail } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { registerUserSchema } from "../validations/user.validation.js";
 import validate from "../middlewares/validate.middleware.js";
@@ -26,6 +26,13 @@ router.route("/me").get(verifyJWT, getMe);
 // user email verification routes
 router.route('/verify-email').post(verifyEmail);
 router.route('/resend-verification-code').post(resendVerificationCode);
+
+router.route("/change-password").post(verifyJWT, changCurrentPassword);
+router.route("/update-avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
+router.route("/update-account").patch(verifyJWT, updateAccountDetails);
+
+router.route("/channel/:username").get(verifyJWT, getUserChannelProfile);
+router.route("/watch-history").get(verifyJWT, getWatchHistory);
 // Google OAuth Routes
 router.get(
     "/auth/google",
