@@ -1,5 +1,18 @@
 import { Router } from "express";
-import { changCurrentPassword, getMe, getUserChannelProfile, getWatchHistory, loginUser, logoutUser, refreshAccessToken, registerUser, resendVerificationCode, updateAccountDetails, updateUserAvatar, verifyEmail } from "../controllers/user.controller.js";
+import {
+    changCurrentPassword,
+    getMe,
+    getUserChannelProfile,
+    getWatchHistory,
+    loginUser,
+    logoutUser,
+    refreshAccessToken,
+    registerUser,
+    resendVerificationCode,
+    updateAccountDetails,
+    updateUserAvatar,
+    verifyEmail
+} from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { registerUserSchema } from "../validations/user.validation.js";
 import validate from "../middlewares/validate.middleware.js";
@@ -18,7 +31,6 @@ router.post(
     registerUser
 );
 router.route("/login").post(loginUser);
-
 // secured routes
 router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/refresh-token").post(refreshAccessToken);
@@ -38,7 +50,6 @@ router.get(
     "/auth/google",
     passport.authenticate("google", { scope: ["profile", "email"] })
 );
-
 router.get(
     "/auth/google/callback",
     passport.authenticate("google", { failureRedirect: "/login" }),
