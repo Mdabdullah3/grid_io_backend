@@ -42,11 +42,11 @@ app.use(cookieParser());
 /// Routes import
 import userRoute from "./routes/user.route.js";
 import errorHandler from "./middlewares/errorHandler.js";
-
+import subscribeRouter from "./routes/subscription.route.js"
 
 
 // routes declaration
 app.use("/api/v1/users", userRoute);
-
+app.use("/api/v1/subscription", subscribeRouter);
 app.use(errorHandler);
 export { app };
