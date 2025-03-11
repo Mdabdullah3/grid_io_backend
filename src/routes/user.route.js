@@ -11,7 +11,7 @@ import {
     resendVerificationCode,
     updateAccountDetails,
     updateUserAvatar,
-    verifyEmail
+    verifyEmail,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { registerUserSchema } from "../validations/user.validation.js";
@@ -21,37 +21,58 @@ import passport from "passport";
 import { generateAccessTokenAndRefreshToken } from "../controllers/user.controller.js";
 
 const router = Router();
+
+// Register User
 router.post(
     "/register",
     upload.fields([
         { name: "avatar", maxCount: 1 },
-        { name: "coverImage", maxCount: 1 }
+        { name: "coverImage", maxCount: 1 },
     ]),
     validate(registerUserSchema),
     registerUser
 );
-router.route("/login").post(loginUser);
-// secured routes
-router.route("/logout").post(verifyJWT, logoutUser);
-router.route("/refresh-token").post(refreshAccessToken);
-router.route("/me").get(verifyJWT, getMe);
-// user email verification routes
-router.route('/verify-email').post(verifyEmail);
-router.route('/resend-verification-code').post(resendVerificationCode);
 
+// Login User
+router.route("/login").post(loginUser);
+
+// Logout User
+router.route("/logout").post(verifyJWT, logoutUser);
+
+// Refresh Token
+router.route("/refresh-token").post(refreshAccessToken);
+
+// Get Current User
+router.route("/me").get(verifyJWT, getMe);
+
+// Verify Email
+router.route("/verify-email").post(verifyEmail);
+
+// Resend Verification Code
+router.route("/resend-verification-code").post(resendVerificationCode);
+
+// Change Password
 router.route("/change-password").post(verifyJWT, changCurrentPassword);
+
+// Update Avatar
 router.route("/update-avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
+
+// Update Account Details
 router.route("/update-account").patch(verifyJWT, updateAccountDetails);
 
+// Get User Channel Profile
 router.route("/channel/:username").get(verifyJWT, getUserChannelProfile);
+
+// Get Watch History
 router.route("/watch-history").get(verifyJWT, getWatchHistory);
+
 // Google OAuth Routes
 router.get(
-    "/auth/google",
+    "/google",
     passport.authenticate("google", { scope: ["profile", "email"] })
 );
 router.get(
-    "/auth/google/callback",
+    "/google/callback",
     passport.authenticate("google", { failureRedirect: "/login" }),
     async (req, res) => {
         try {
@@ -65,4 +86,5 @@ router.get(
         }
     }
 );
+
 export default router;
